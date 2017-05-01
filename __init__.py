@@ -2,14 +2,13 @@ import sys
 from pddlToGraphs import parseDomAndProb
 from Planner import preprocessDomain
 from Flaws import FlawLib
-from Planner import obTypesDict
 from Element import Argument
 from Planner import PlanSpacePlanner
 from Planner import topoSort
-from Plan import Action
+from PlanElementGraph import Action
 
 
-if __name__ ==  '__main__':
+if __name__ == '__main__':
 	num_args = len(sys.argv)
 	if num_args >1:
 		domain_file = sys.argv[1]
