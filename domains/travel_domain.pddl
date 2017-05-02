@@ -1,12 +1,15 @@
 (define (domain car-plane-world)
     (:types  ticket person place transportation-device - object
-		plane car - transportation-device)
+		plane car - transportation-device
+		element - object
+		step literal - element)
     (:predicates
         (person ?person - person)
         (place ?place - place)
         (at ?thing - object ?place - object)
         (in ?person - person ?vehicle - transportation-device)
-        (has ?person - person ?ticket - ticket))
+        (has ?person - person ?ticket - ticket)
+        )
                     
     (:action get-in-car
         :parameters (?person - person ?car - car ?place - place)
@@ -64,7 +67,7 @@
                     (not (at ?person ?from)))
 		:decomp(
 			:sub-params (?car - car ?s1 ?s2 ?s3 - step)
-			:requirements(
+			:requirements( and
 				(= ?s1 (get-in-car ?person ?car ?to))
                 (= ?s2 (drive ?person ?car ?from ?to))
                 (= ?s3 (get-out-of-car ?person ?car ?from))
@@ -80,7 +83,7 @@
 		:decomp(
 			:sub-params (?plane - plane ?t - ticket 
 				?s1 ?s2 ?s3 ?s4 - step)
-			:requirements(
+			:requirements(and
 				(= ?s1 (buy-tickets ?person))
                 (= ?s2 (board-plane ?person ?plane ?from))
                 (= ?s3 (fly ?person ?plane ?from ?to))

@@ -672,7 +672,7 @@ def _parse_precondition_or_effect(iter, keyword, type):
 
 
 def _parse_formula(iter, type):
-	ni = next(iter)
+	ni = iter
 	if ni.empty():
 		return None
 	cond = parse_formula(ni)

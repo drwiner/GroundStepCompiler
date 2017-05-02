@@ -82,7 +82,7 @@ def getSubFormulaGraph(formula, op_graph, parent=None, relationship=None, elemen
 		if relationship == 'actor-of':
 			edges.add(Edge(parent, arg, 'actor-of'))
 		else:
-			edges.add(Edge(lit, arg, GC.ARGLABELS[i]))
+			edges.add(Edge(lit, arg, i))
 
 	return elements, edges
 
@@ -123,7 +123,7 @@ def getSubFormulaNoParent(formula, objects):
 	for i, child in enumerate(formula.children):
 		# children are list
 		arg = next(ob_element for ob_name, ob_element in objects.items() if child.key == ob_name)
-		edges.add(Edge(lit, arg, GC.ARGLABELS[i]))
+		edges.add(Edge(lit, arg, i))
 		elements.add(arg)
 	return elements, edges
 
@@ -198,7 +198,7 @@ def decorateElm(child, DG):
 	elif child.key == 'consents':
 		arg1, arg2, by = child.children
 		DG.edges.add(Edge(whichElm(arg1.key.name, arg2.key.name, 'actor-of')))
-	elif child.key == 'occurs':
+	elif child.key in {'occurs', '=', 'is', 'equals'}:
 		# then, first argument is step element name and second argument is an operator with children args
 		stepFromArg(child, DG)
 	elif child.key == 'is-state':
@@ -209,10 +209,10 @@ def decorateElm(child, DG):
 
 
 def stepFromArg(arg, DG):
-	step_elm = whichElm(arg.children[0].key, DG)
+	step_elm = whichElm(arg.children[0].key.name, DG)
 	args = [whichElm(child.key.name, DG) for child in arg.children[0].children]
 	for i, arg in enumerate(args):
-		DG.edges.add(Edge(step_elm, arg, GC.ARGLABELS[i]))
+		DG.edges.add(Edge(step_elm, arg, i))
 
 
 def litFromArg(arg, DG):
@@ -225,7 +225,7 @@ def litFromArg(arg, DG):
 	lit_elm = Literal(name=lit_name, arg_name=lit_name + str(uuid4())[19:23], num_args=len(arg.children), truth=neg)
 	for i, ch in enumerate(arg.children):
 		e_i = whichElm(ch.key.name, DG)
-		DG.edges.add(Edge(lit_elm, e_i, GC.ARGLABELS[i]))
+		DG.edges.add(Edge(lit_elm, e_i, i))
 	return lit_elm
 
 
@@ -263,7 +263,7 @@ def rPrintFormulaElements(formula):
 def createElementByType(parameter, decomp):
 	paramtypes = GC.object_types[next(iter(parameter.types))]
 
-	if 'character' in parameter.types or 'actor' in parameter.types:
+	if 'character' in parameter.types or 'actor' in parameter.types or 'person' in parameter.types:
 		elm = Actor(arg_name=parameter.name)
 	elif 'arg' in paramtypes or 'item' in paramtypes or 'place' in paramtypes:
 		arg_type = next(iter(parameter.types))
@@ -273,7 +273,10 @@ def createElementByType(parameter, decomp):
 	elif 'literal' in parameter.types or 'lit' in parameter.types:
 		elm = Literal(arg_name=parameter.name)
 	else:
-		raise ValueError('parameter {} not story element'.format(parameter.name))
+		# assume its type object, treat as Argument.
+		arg_type = next(iter(parameter.types))
+		elm = Argument(typ=arg_type, arg_name=parameter.name)
+		# raise ValueError('parameter {} not story element'.format(parameter.name))
 
 	decomp.elements.add(elm)
 	return
@@ -294,7 +297,7 @@ def evalActionParams(params, op_graph):
 				arg_type = 'Condition'
 			arg = Argument(typ=arg_type, arg_name=parameter.name)
 			op_graph.elements.add(arg)
-		op_graph.edges.add(Edge(op_graph.root, arg, GC.ARGLABELS[i]))
+		op_graph.edges.add(Edge(op_graph.root, arg, i))
 
 
 """ Convert pddl file to set of operator graphs"""
@@ -316,11 +319,11 @@ def domainToOperatorGraphs(domain):
 			getFormulaGraph(action.effect.formula, op_graph, parent=op, relationship='effect-of',
 							elements=op_graph.elements,
 							edges=op_graph.edges)
-		if hasattr(action, 'decomp') and action.decomp is not None:
+		if action.decomp is not None:
 			# henceforth, action.decomp is tuple (sub-params, decomp)
 			decomp_graph = PlanElementGraph(name=action.name, type_graph='decomp')
 			# need to adjust this slightly:
-			getDecompGraph(action.decomp.formula, decomp_graph, action.parameters)
+			getDecompGraph(action.decomp[1].formula, decomp_graph, action.parameters + action.decomp[0])
 			op_graph.subplan = decomp_graph
 			opelms = list(op_graph.elements)
 			dpelms = list(decomp_graph.elements)
@@ -366,7 +369,7 @@ def problemToGraphs(problem):
 		init_graph.elements.add(lit)
 		init_graph.edges.add(Edge(init_op, lit, 'effect-of'))
 		for i, p in enumerate(condition.parameters):
-			init_graph.edges.add(Edge(lit, Args[p], GC.ARGLABELS[i]))
+			init_graph.edges.add(Edge(lit, Args[p], i))
 
 	return Args, init_graph, goal_graph
 
@@ -378,7 +381,7 @@ def addNegativeInitStates(predicates, initAction, objects):
 	init_tups = defaultdict(set)
 	effects = initAction.getNeighbors(initAction.root)
 	for eff in effects:
-		nontup = sorted([(edge.sink, GC.ARGLABELS.index(edge.label)) for edge in initAction.getIncidentEdges(eff)],
+		nontup = sorted([(edge.sink, edge.label) for edge in initAction.getIncidentEdges(eff)],
 						key=lambda x: x[1])
 		init_tups[eff.name].add(tuple(nontup[i][0] for i in range(len(nontup))))
 
@@ -402,7 +405,7 @@ def addNegativeInitStates(predicates, initAction, objects):
 			pc.ID = uuid4()
 
 			for i, arg in enumerate(pt):
-				initAction.edges.add(Edge(pc, arg, GC.ARGLABELS[i]))
+				initAction.edges.add(Edge(pc, arg, i))
 
 			if len(pt) > 0:
 				initAction.elements.add(pc)
@@ -411,7 +414,7 @@ def addNegativeInitStates(predicates, initAction, objects):
 
 def domainAxiomsToGraphs(domain):
 	if len(domain.axioms) > 0:
-		from pddlToGraphs import ActionStmt
+		from pddl.parser import ActionStmt
 	for ax in domain.axioms:
 		domain.actions.append(ActionStmt(name=ax.name, parameters=ax.vars_, precond=ax.context,
 										 effect=ax.implies))
