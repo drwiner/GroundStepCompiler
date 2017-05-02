@@ -168,8 +168,8 @@ class GLib:
 		# cndts (key is step number, value is set of step numbers)
 		self.ante_dict = defaultdict(set)
 		# threats (key is step number, value is set of step numbers)
-		self.threats = defaultdict(set)
-		# what's this?
+		self.threat_dict = defaultdict(set)
+		# id_dict is just by precondition ID
 		self.id_dict = defaultdict(set)
 		self.eff_dict = defaultdict(set)
 

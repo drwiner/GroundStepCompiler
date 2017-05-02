@@ -33,6 +33,7 @@ def Plannify(RQ, GL, h):
 	print('...returning consistent plans')
 	return [Plan for Plan in Plans if Plan is not None and Plan.isInternallyConsistent()]
 
+
 def partialUnify(PS, _map):
 	if _map is False:
 		return False
@@ -85,43 +86,64 @@ def isArgNameConsistent(Partially_Ground_Steps):
 def productByPosition(Libs):
 	return itertools.product(*[list(Libs[T.position]) for T in Libs])
 
-def Linkify(Planets, RQ, GL):
-	#Planets are plans containing steps which may not be ground steps from story_GL
+
+def filter_and_add_orderings(planets, RQ):
 	orderings = RQ.OrderingGraph.edges
-	if len(orderings) > 0:
-		for Planet in Planets:
-			if Planet is None:
-				continue
-			GtElm = Planet.getElementById
-			Planet.OrderingGraph.edges = {Edge(GtElm(ord.source.ID), GtElm(ord.sink.ID),'<') for ord in orderings}
+	indices = []
+	for i in range(len(planets)):
+		# filter None Planets, which are scratched possible worlds
+		if planets[i] is None:
+			continue
+
+		# add orderings
+		if len(orderings) > 0:
+			GtElm = planets[i].getElementById
+			planets[i].OrderingGraph.edges = {Edge(GtElm(ord.source.ID), GtElm(ord.sink.ID), '<') for ord in orderings}
+
+		indices.append(i)
+
+	planets[:] = [planets[i] for i in indices]
 
 
+def Linkify(Planets, RQ, GL):
+	"""
+	:param Planets: A list of plan-element-graphs
+	:param RQ: ReQuirements
+	:param GL: Ground Library
+	:return: List of Plan-element-graphs which include causal link and ordering graphs
+	"""
+	# Filter "None" planets, which exist if they did not have step at level "h", and add ReQuired orderings
+	filter_and_add_orderings(Planets, RQ)
+
+	# If there's no causal link requirements, end here.
 	links = RQ.CausalLinkGraph.edges
 	if len(links) == 0:
 		return False
 
-	planet_list = list(Planets)
+	# For each link, test if the planet supports that link
 	for link in links:
-		for Planet in planet_list:
-			if Planet is None:
-				Planets.remove(Planet)
-				continue
+		indices = []
+		for i in range(len(Planets)):
 
-			src = Planet.getElementById(link.source.ID)
-			snk = Planet.getElementById(link.sink.ID)
+			src = Planets[i].getElementById(link.source.ID)
+			snk = Planets[i].getElementById(link.sink.ID)
 			# This condition could be a blank element literal
-			cond = Planet.getElementById(link.label.ID)
+			cond = Planets[i].getElementById(link.label.ID)
 
+			# use the step numbers in order to reason about "ground steps" not these partial shits.
+			# ante_dict == cndt_dict
 			if src.stepnumber not in GL.ante_dict[snk.stepnumber]:
-				Planets.remove(Planet)
 				continue
 
 			if not GL.hasConsistentPrecondition(GL[snk.stepnumber], cond):
-				Planets.remove(Planet)
 				continue
 
-			Planet.CausalLinkGraph.addEdge(src, snk, cond)
-			Planet.OrderingGraph.addEdge(src, snk)
+			Planets[i].CausalLinkGraph.addEdge(src, snk, cond)
+			Planets[i].OrderingGraph.addEdge(src, snk)
+			indices.append(i)
+
+		# Remove planets which cannot support link
+		Planets[:] = [Planets[i] for i in indices]
 
 	if len(Planets) == 0:
 		raise ValueError('no Planet could support links in {}'.format(RQ.name))
@@ -135,6 +157,7 @@ def Groundify(Planets, GL, has_links):
 		print("... Planet {}".format(i))
 		for Step in Planet.Step_Graphs:
 			print('... Unifying {} with {}'.format(Step, GL[Step.stepnumber]))
+			# Unify Actions (1) swaps step graphs with ground step
 			Planet.UnifyActions(Step, GL[Step.stepnumber])
 
 	if not has_links:

@@ -227,7 +227,7 @@ class Formula(Visitable):
 class ActionStmt(Visitable):
 	"""This class represents the AST node for a pddl action."""
 
-	def __init__(self, name, parameters, precond, effect, decomp = None, agents = None):
+	def __init__(self, name, parameters, precond, effect, decomp=None, agents=None):
 		""" Construct a new Action.
 
 		Keyword arguments:
@@ -691,6 +691,13 @@ def parse_requirements_stmt(iter):
 
 	
 def parse_decomp_stmt(it):
+	# call parsers to parse sub-params, requirements, effect
+	# first its the parameters
+	if not it.try_match(':sub-params'):
+		raise ValueError("Error decomp statmnt needs sub:param")
+	varList = parse_typed_var_list(next(it))
+	rq = _parse_precondition_or_effect(it, ':requirements')
+
 	return _parse_precondition_or_effect(it, ':decomp', DecompStmt)
 
 	

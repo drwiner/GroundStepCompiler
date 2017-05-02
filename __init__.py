@@ -12,17 +12,17 @@ if __name__ ==  '__main__':
 		if num_args > 2:
 			problem_file = sys.argv[2]
 	else:
-		domain_file = 'domains/ark-domain.pddl'
-		problem_file = 'domains/ark-problem.pddl'
+		domain_file = 'domains/travel_domain.pddl'
+		problem_file = 'domains/travel-to-la.pddl'
 
 	GL = GLib(domain_file, problem_file)
-	planner = PlanSpacePlanner(GL)
-
-	results = planner.POCL(1)
-
-	for result in results:
-		totOrdering = topoSort(result)
-		print('\n\n\n')
-		for step in topoSort(result):
-			print(Action.subgraph(result, step))
-		#print(result)
+	# planner = PlanSpacePlanner(GL)
+	#
+	# results = planner.POCL(1)
+	#
+	# for result in results:
+	# 	totOrdering = topoSort(result)
+	# 	print('\n\n\n')
+	# 	for step in topoSort(result):
+	# 		print(Action.subgraph(result, step))
+	# 	#print(result)

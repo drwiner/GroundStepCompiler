@@ -317,7 +317,9 @@ def domainToOperatorGraphs(domain):
 							elements=op_graph.elements,
 							edges=op_graph.edges)
 		if hasattr(action, 'decomp') and action.decomp is not None:
+			# henceforth, action.decomp is tuple (sub-params, decomp)
 			decomp_graph = PlanElementGraph(name=action.name, type_graph='decomp')
+			# need to adjust this slightly:
 			getDecompGraph(action.decomp.formula, decomp_graph, action.parameters)
 			op_graph.subplan = decomp_graph
 			opelms = list(op_graph.elements)
