@@ -671,6 +671,13 @@ def _parse_precondition_or_effect(iter, keyword, type):
 	return type(cond)
 
 
+def _parse_formula(iter, type):
+	ni = next(iter)
+	if ni.empty():
+		return None
+	cond = parse_formula(ni)
+	return type(cond)
+
 def parse_precondition_stmt(it):
 	return _parse_precondition_or_effect(it, ':precondition', PreconditionStmt)
 
@@ -693,12 +700,15 @@ def parse_requirements_stmt(iter):
 def parse_decomp_stmt(it):
 	# call parsers to parse sub-params, requirements, effect
 	# first its the parameters
+	it = it.next()
 	if not it.try_match(':sub-params'):
-		raise ValueError("Error decomp statmnt needs sub:param")
+		raise ValueError("Error decomp statement needs :sub-params")
 	varList = parse_typed_var_list(next(it))
-	rq = _parse_precondition_or_effect(it, ':requirements')
+	if not it.try_match(':requirements'):
+		raise ValueError('Error decomp statement needs :requirements')
+	rq = _parse_formula(next(it), DecompStmt)
 
-	return _parse_precondition_or_effect(it, ':decomp', DecompStmt)
+	return (varList, rq)
 
 	
 def parse_agents_stmt(it):
@@ -736,15 +746,15 @@ def parse_action_stmt(iter):
 	pre = parse_precondition_stmt(iter)
 	eff = parse_effect_stmt(iter)
 
-	try:
+	decomp = None
+	if iter.try_match(':decomp'):
 		decomp = parse_decomp_stmt(iter)
-		return ActionStmt(name, param, pre, eff, decomp)
-	except:
-		try:
-			Agents = parse_agents_stmt(iter)
-			return ActionStmt(name, param, pre, eff, agents=Agents)
-		except:
-			return ActionStmt(name, param, pre, eff)
+
+	agents = None
+	if iter.try_match(':agents'):
+		agents = parse_agents_stmt(iter)
+
+	return ActionStmt(name, param, pre, eff, decomp, agents)
 
 
 def parse_predicates_stmt(iter):
