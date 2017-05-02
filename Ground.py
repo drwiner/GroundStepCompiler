@@ -149,6 +149,7 @@ def reload(name):
 
 	return GL
 
+
 class GLib:
 
 	def __init__(self, domain, problem):
@@ -164,10 +165,14 @@ class GLib:
 		# a candidate map is a dictionary such that cndt_map[step_id][pre_id] = [(s_1, e_1),...,(s_k, e_k)] values are steps whose effect is same
 		self.cndt_map = defaultdict(lambda x: defaultdict(list))
 		self.threat_map = defaultdict(lambda x: defaultdict(list))
+		# cndts (key is step number, value is set of step numbers)
 		self.ante_dict = defaultdict(set)
+		# threats (key is step number, value is set of step numbers)
+		self.threats = defaultdict(set)
+		# what's this?
 		self.id_dict = defaultdict(set)
 		self.eff_dict = defaultdict(set)
-		self.threat_dict = defaultdict(set)
+
 		print('...Creating PlanGraph base level')
 		self.loadAll()
 
@@ -241,15 +246,19 @@ class GLib:
 				count += 1
 		return count
 
-	def getPotentialLinkConditions(self, src, snk):
-		cndts = []
-		for pre in self[snk.stepnumber].preconditions:
-			if src.stepnumber not in self.id_dict[pre.replaced_ID]:
-				continue
-			cndts.append(Edge(src,snk, copy.deepcopy(pre)))
-		return cndts
+	# def getPotentialLinkConditions(self, src, snk):
+	# 	cndts = []
+	# 	for pre in self[snk.stepnumber].preconditions:
+	# 		if src.stepnumber not in self.id_dict[pre.replaced_ID]:
+	# 			continue
+	# 		cndts.append(Edge(src,snk, copy.deepcopy(pre)))
+	# 	return cndts
 
 	def getPotentialEffectLinkConditions(self, src, snk):
+		"""
+		Given source and sink steps, return {eff(src) \cap pre(snk)}
+		But, let those conditions be those of the src.
+		"""
 		cndts = []
 		for eff in self[src.stepnumber].effects:
 			for pre in self[snk.stepnumber].preconditions:
