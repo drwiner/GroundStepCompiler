@@ -1,11 +1,9 @@
 import itertools
-from Plan import Plan
-from ElementGraph import Action, Condition
+from PlanElementGraph import Action, PlanElementGraph, Condition
 from Element import Operator
-from Graph import Edge, findConsistentEdgeMap
+from Graph import Edge
 from clockdeco import clock
 from Flaws import Flaw
-import copy
 
 @clock
 def Plannify(RQ, GL, h):
@@ -22,16 +20,15 @@ def Plannify(RQ, GL, h):
 
 	print('...Planets')
 	#A Planet is a plan s.t. all steps are "arg_name consistent", but a step may not be equiv to some ground step
-	Planets = [Plan.Actions_2_Plan(W, h) for W in Worlds if argNameConsistencyCheck(W)]
-	#Planets = [Plan.Actions_2_Plan(W, h) for W in Worlds if isArgNameConsistent(W)]
+	Planets = [PlanElementGraph.Actions_2_Plan(W, h) for W in Worlds if isArgNameConsistent(W)]
 
 	print('...Linkify')
 	#Linkify installs orderings and causal links from RQ/decomp to Planets, rmvs Planets which cannot support links
 	has_links = Linkify(Planets, RQ, GL)
 
-#	print('...Groundify')
+	print('...Groundify')
 	#Groundify is the process of replacing partial steps with its ground step, and removing inconsistent planets
-#	Plans = Groundify(Planets, GL, has_links)
+	Plans = Groundify(Planets, GL, has_links)
 
 	print('...returning consistent plans')
 	return [Plan for Plan in Plans if Plan is not None and Plan.isInternallyConsistent()]
@@ -39,6 +36,8 @@ def Plannify(RQ, GL, h):
 def partialUnify(PS, _map):
 	if _map is False:
 		return False
+#	NS = PS.deepcopy()
+	import copy
 	NS = copy.deepcopy(PS)
 	effects = [edge.sink for edge in NS.edges if edge.label == 'effect-of']
 	for elm in effects:
@@ -67,54 +66,6 @@ def partialUnify(PS, _map):
 	NS.updateArgs()
 	return NS
 
-def unify(GL, partial, _map):
-	if _map is False:
-		return False
-	var_list = []
-
-	gstep = GL[_map[partial.root].stepnumber].deepcopy()
-	gstep.root.arg_name = partial.root.arg_name
-
-	for eff in partial.effects:
-		if eff in _map:
-			elm = _map[eff]
-			glit = GL._glits[elm.litnumber]
-			glit.index = elm.index
-			glit.ID = eff.ID
-			glit.arg_name = eff.arg_name
-			gstep.Effects[elm.index] = glit
-			var_list.append(glit)
-
-	for pre in partial.preconditions:
-		if pre in _map:
-			elm = _map[pre]
-			glit = GL._glits[elm.litnumber]
-			glit.index = elm.index
-			glit.ID = pre.ID
-			glit.arg_name = eff.arg_name
-			gstep.Preconditions[elm.index] = glit
-			var_list.append(glit)
-
-	#or something like, assigning arg_name to objects of the gstep
-	for arg in gstep.Args:
-		if arg in _map:
-			arg.arg_name = _map[arg].arg_name
-
-	for arg in partial.Args:
-		if arg in _map:
-			elm = _map[arg]
-			elm.arg_name = arg.arg_name
-			var_list.append(elm)
-
-
-	# if gstep.height > 0:
-	# 	for arg in partial.Args:
-	# 		if arg in _map:
-	# 			elm = _map[arg]
-	# 			pass
-
-	return gstep
-
 def isArgNameConsistent(Partially_Ground_Steps):
 	"""
 		@param Partially_Ground_Steps <-- partially ground required steps (PGRS), reach required step associated with ground step
@@ -131,19 +82,6 @@ def isArgNameConsistent(Partially_Ground_Steps):
 					arg_name_dict[elm.arg_name] = elm
 	return True
 
-def argNameConsistencyCheck(GSteps):
-	arg_name_dict = {}
-	for gstep in GSteps:
-		elms = gstep.to_elms()
-		for elm in elms:
-			if elm.arg_name is not None:
-				if elm.arg_name in arg_name_dict:
-					if not elm.isConsistent(arg_name_dict[elm.arg_name]):
-						return False
-				else:
-					arg_name_dict[elm.arg_name] = elm
-	return True
-
 def productByPosition(Libs):
 	return itertools.product(*[list(Libs[T.position]) for T in Libs])
 
@@ -154,11 +92,8 @@ def Linkify(Planets, RQ, GL):
 		for Planet in Planets:
 			if Planet is None:
 				continue
-			op_elms = Planet.to_op_elms()
-			source = Planet.getElmByIDFromElms(ord.source.ID, op_elms)
-			sink = Planet.getElmByIDFromElms(ord.sink.ID, op_elms)
-			#GtElm = Planet.get_by_id
-			Planet.OrderingGraph.edges = {Edge(source, sink, '<') for ord in orderings}
+			GtElm = Planet.getElementById
+			Planet.OrderingGraph.edges = {Edge(GtElm(ord.source.ID), GtElm(ord.sink.ID),'<') for ord in orderings}
 
 
 	links = RQ.CausalLinkGraph.edges
@@ -171,22 +106,16 @@ def Linkify(Planets, RQ, GL):
 			if Planet is None:
 				removable.add(i)
 				continue
-			op_elms = Planet.to_op_elms()
-			src = Planet.getElmByIDFromElms(link.source.ID, op_elms)
-			snk = Planet.getElmByIDFromElms(link.sink.ID, op_elms)
-			cond = None
-			for prec in Planet[snk.index].Preconditions:
-				if prec.ID == link.label.ID:
-					cond = prec
-					break
-			if cond is None:
-				continue#?
+
+			src = Planet.getElementById(link.source.ID)
+			snk = Planet.getElementById(link.sink.ID)
+			cond = Planet.getElementById(link.label.ID)
 
 			if src.stepnumber not in GL.ante_dict[snk.stepnumber]:
 				removable.add(i)
 				continue
 
-			if src.stepnumber not in GL.cndt_dict[cond.litnumber]:
+			if not GL.hasConsistentPrecondition(GL[snk.stepnumber],cond):
 				removable.add(i)
 				continue
 
@@ -203,50 +132,48 @@ def Linkify(Planets, RQ, GL):
 	return True
 
 
-#def Groundify(Planets, GL, has_links):
-#	print('...Groundify - Unifying Actions with GL')
-	# i = 0
-	# for Planet in Planets:
-	# 	if Planet is None:
-	# 		continue
-	# 	print("... Planet {}".format(i))
-	# 	i += 1
-	# 	for Step in Planet.Step_Graphs:
-	# 		print('... Unifying {} with {}'.format(Step, GL[Step.stepnumber]))
-	# 		#unify(GL, Step)
-	# 		Planet.UnifyActions(Step, GL[Step.stepnumber])
-	# 		#Do the following: find GL[step.stepnumber], but IDs should take place of args in Step.
+def Groundify(Planets, GL, has_links):
+	print('...Groundify - Unifying Actions with GL')
+	i = 0
+	for Planet in Planets:
+		if Planet is None:
+			continue
+		print("... Planet {}".format(i))
+		i += 1
+		for Step in Planet.Step_Graphs:
+			print('... Unifying {} with {}'.format(Step, GL[Step.stepnumber]))
+			Planet.UnifyActions(Step, GL[Step.stepnumber])
 
-	# if not has_links:
-	# 	#we're done
-	# 	return Planets
-	#
-	# print('...Groundify - Creating Causal Links')
-	# Discovered_Planets = []
-	# for Plan in Planets:
-	# 	if Plan is None:
-	# 		continue
-	# 	#print(Plan)
-	# 	Libs = [LinkLib(i, link, GL) for i, link in enumerate(Plan.CausalLinkGraph.edges)]
-	#
-	# 	#LW = [plan1 [link1.condition, link2.condition,..., link-n.condition],
-	# 		#  plan2 [link1.condition, link2.condition, ..., link-m.condition],
-	# 	    #  plan-k [l1,...,lz]]
-	# 	LW = productByPosition(Libs)
-	#
-	# 	for lw in LW:
-	# 		NP = Plan.deepcopy()
-	# 		for _link in list(lw):
-	# 			pre_token = GL.getConsistentPrecondition(Action.subgraph(NP, _link.sink), _link.label)
-	# 			#label = NP.getElementByID(_link.label.ID)
-	# 			if pre_token != _link.label:
-	# 				NP.ReplaceSubgraphs(pre_token, _link.label)
-	# 			NP.CausalLinkGraph.edges.remove(_link)
-	# 			NP.CausalLinkGraph.edges.add(Edge(_link.source, _link.sink, Condition.subgraph(NP, _link.label)))
-	#
-	# 		Discovered_Planets.append(NP)
-	#
-	# return Discovered_Planets
+	if not has_links:
+		#we're done
+		return Planets
+
+	print('...Groundify - Creating Causal Links')
+	Discovered_Planets = []
+	for Plan in Planets:
+		if Plan is None:
+			continue
+		#print(Plan)
+		Libs = [LinkLib(i, link, GL) for i, link in enumerate(Plan.CausalLinkGraph.edges)]
+
+		#LW = [plan1 [link1.condition, link2.condition,..., link-n.condition],
+			#  plan2 [link1.condition, link2.condition, ..., link-m.condition],
+		    #  plan-k [l1,...,lz]]
+		LW = productByPosition(Libs)
+
+		for lw in LW:
+			NP = Plan.deepcopy()
+			for _link in list(lw):
+				pre_token = GL.getConsistentPrecondition(Action.subgraph(NP, _link.sink), _link.label)
+				#label = NP.getElementByID(_link.label.ID)
+				if pre_token != _link.label:
+					NP.ReplaceSubgraphs(pre_token, _link.label)
+				NP.CausalLinkGraph.edges.remove(_link)
+				NP.CausalLinkGraph.edges.add(Edge(_link.source, _link.sink, Condition.subgraph(NP, _link.label)))
+
+			Discovered_Planets.append(NP)
+
+	return Discovered_Planets
 
 
 class ActionLib:
@@ -259,18 +186,16 @@ class ActionLib:
 		self.root = RS.root
 		self._cndts = []
 		for gs in GL:
-			if RS.root.name is not None:
-				if gs.name != self.RS.root.name:
-					continue
-			elm_maps = findConsistentEdgeMap(gs.to_edges, set(self.RS.edges))
+			if not gs.root.isConsistent(self.RS.root):
+				continue
+			elm_maps = gs.findConsistentSubgraph(self.RS)
 			if len(elm_maps) == 0:
 				continue
 			for map in elm_maps:
 				if len(map) == 0:
-					#self.RS.root.merge(gs.root)
-					self.RS.root.stepnumber = gs.stepnumber
-					#self.RS.root.replaced_ID = gs.root.replaced_ID
-				self.append(unify(GL, self.RS, map), gs.stepnumber)
+					self.RS.root.merge(gs.root)
+					self.RS.root.replaced_ID = gs.root.replaced_ID
+				self.append(partialUnify(self.RS, map), gs.stepnumber)
 		if len(self) == 0:
 			raise ValueError('no gstep compatible with RS {}'.format(self))
 

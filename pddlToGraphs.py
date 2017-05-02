@@ -1,6 +1,6 @@
 from pddl.parser import Parser
 from collections import defaultdict
-from Plan import Action, ElementGraph
+from PlanElementGraph import Action, PlanElementGraph
 from Graph import Edge
 from Element import Argument, Operator, Literal, Element, Actor
 from clockdeco import clock
@@ -317,7 +317,7 @@ def domainToOperatorGraphs(domain):
 							elements=op_graph.elements,
 							edges=op_graph.edges)
 		if hasattr(action, 'decomp') and action.decomp is not None:
-			decomp_graph = ElementGraph(name=action.name)
+			decomp_graph = PlanElementGraph(name=action.name, type_graph='decomp')
 			getDecompGraph(action.decomp.formula, decomp_graph, action.parameters)
 			op_graph.subplan = decomp_graph
 			opelms = list(op_graph.elements)
@@ -421,11 +421,7 @@ def parseDomAndProb(domain_file, problem_file):
 	domain, dom = parser.parse_domain_drw()
 	problem, v = parser.parse_problem_drw(dom)
 
-
 	GC.object_types.update(obTypesDict(domain.types))
-	GC.prim_predtypes, GC.abs_predtypes = predTypesDict(list(dom.predicates.items()))
-	#GC.predicate_types.update(predTypesDict(list(dom.predicates.items())))
-	#GC.abs_predicate_types.update(predTypesDict(list(dom.predicates.items())))
 
 	args, init, goal = problemToGraphs(problem)
 	objects = set(args.values())
@@ -454,16 +450,6 @@ def obTypesDict(object_types):
 		obtypes[t.name].update(accumulated)
 	return obtypes
 
-def predTypesDict(pred_types):
-	prim_predtypes = defaultdict(set)
-	abs_predtypes = defaultdict(set)
-	for name, predicate in pred_types:
-		arg_types = {tup[0].name for _, tup in predicate.signature}
-		if 'step' in arg_types or 'literal' in arg_types:
-			abs_predtypes[name] = arg_types
-		else:
-			prim_predtypes[name] = arg_types
-	return prim_predtypes, abs_predtypes
 
 def rFollowHierarchy(object_types, child_name, accumulated=set()):
 	for ob in object_types:

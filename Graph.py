@@ -68,10 +68,10 @@ class Graph(Element):
 	def __iter__(self):
 		elms = iter(self.elements)
 		yield next(elms)
-
-	def get_by_id(self, _id):
+	
+	def getElementById(self, ID):
 		for element in self.elements:
-			if element.ID == _id:
+			if element.ID == ID:
 				return element
 		return None
 	
@@ -94,7 +94,7 @@ class Graph(Element):
 
 		self.assign(oldsnk, newsnk)
 
-		if self.get_by_id(newsnk.ID) is None:
+		if self.getElementById(newsnk.ID) is None:
 			raise NameError('newsnk replacer is not found in self')
 
 		# update constraint edges which might reference specific elements being replaced
@@ -237,7 +237,7 @@ def isIdenticalElmsInArgs(C1, C2):
 			continue
 		for elm in u.elements:
 			try:
-				v.get_by_id(elm.ID)
+				v.getElementById(elm.ID)
 			except:
 				if isinstance(elm, Literal):
 					for v_elm in v.elements:
@@ -259,11 +259,11 @@ def retargetElmsInArgs(GSP, C1, C2):
 			continue
 		for elm in u.elements:
 			bigger_map[elm] = v.getElmByRID(elm.replaced_ID)
-			#if bigger_map[elm] is None and isinstance(elm, Literal):
-			#	for v_elm in v.elements:
-			#		if v_elm.name == elm.name and v_elm.truth == elm.truth:
-			#			bigger_map[elm] = v_elm
-			#			break
+			if bigger_map[elm] is None and isinstance(elm, Literal):
+				for v_elm in v.elements:
+					if v_elm.name == elm.name and v_elm.truth == elm.truth:
+						bigger_map[elm] = v_elm
+						break
 	#for each elm in GSP, or story, replace
 	retarget(GSP, bigger_map)
 
@@ -350,7 +350,7 @@ def isConsistentEdgeSet(Rem, Avail, map_=None, return_map=False):
 				return _Map
 	return False
 
-def findConsistentEdgeMap(Rem, Avail, map_=None, Super_Maps=None):
+def findConsistentEdgeMap(Rem, Avail, map_ = None, Super_Maps = None):
 	if map_ is None:
 		map_ = {}
 	if Super_Maps is None:
@@ -379,7 +379,7 @@ def findConsistentEdgeMap(Rem, Avail, map_=None, Super_Maps=None):
 			Map_[edge_match.source] = cndt.source
 		if not cndt.sink in map_:
 			Map_[edge_match.sink] = cndt.sink
-		findConsistentEdgeMap(Rem, Avail, Map_, Super_Maps)
+		findConsistentEdgeMap(copy.deepcopy(Rem), Avail, Map_, Super_Maps)
 
 	return Super_Maps
 
