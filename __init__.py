@@ -2,7 +2,7 @@ import sys
 from Planner import PlanSpacePlanner
 from Planner import topoSort
 from PlanElementGraph import Action
-from Ground import GLib
+from Ground import GLib, upload
 
 
 if __name__ ==  '__main__':
@@ -16,6 +16,7 @@ if __name__ ==  '__main__':
 		problem_file = 'domains/travel-to-la.pddl'
 
 	GL = GLib(domain_file, problem_file)
+	upload(GL, GL.name)
 	# planner = PlanSpacePlanner(GL)
 	#
 	# results = planner.POCL(1)

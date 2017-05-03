@@ -295,6 +295,8 @@ class Argument(Element):
 		return True
 
 	def isConsistentType(self, other):
+		if not isinstance(other, Argument):
+			return False
 		if not self.typ == other.typ:
 			try:
 				if self.typ not in GC.object_types[other.typ.lower()] and \

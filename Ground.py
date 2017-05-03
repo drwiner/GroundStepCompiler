@@ -133,10 +133,9 @@ def assignElmToContainer(GDO, SP, elm, ex_elms):
 import re
 @clock
 def upload(GL, name):
-	n = re.sub('[^A-Za-z0-9]+', '', name)
-	afile = open(n, "wb")
-	pickle.dump(GL, afile)
-	afile.close()
+	# n = re.sub('[^A-Za-z0-9]+', '', name)
+	with open(name, 'wb') as afile:
+		pickle.dump(GL, afile)
 
 @clock
 def reload(name):
@@ -163,8 +162,8 @@ class GLib:
 
 		#dictionaries
 		# a candidate map is a dictionary such that cndt_map[step_id][pre_id] = [(s_1, e_1),...,(s_k, e_k)] values are steps whose effect is same
-		self.cndt_map = defaultdict(lambda x: defaultdict(list))
-		self.threat_map = defaultdict(lambda x: defaultdict(list))
+		# self.cndt_map = defaultdict(lambda x: defaultdict(list))
+		# self.threat_map = defaultdict(lambda x: defaultdict(list))
 		# cndts (key is step number, value is set of step numbers)
 		self.ante_dict = defaultdict(set)
 		# threats (key is step number, value is set of step numbers)
@@ -203,7 +202,9 @@ class GLib:
 
 		print('{} ground steps created'.format(len(self)))
 		print('uploading')
-		upload(self, domain + problem)
+		d_name = domain.split('/')[1].split('.')[0]
+		p_name = problem.split('/')[1].split('.')[0]
+		self.name = d_name + '.' + p_name
 
 	def insert(self, _pre, antestep, eff):
 		self.id_dict[_pre.replaced_ID].add(antestep.stepnumber)

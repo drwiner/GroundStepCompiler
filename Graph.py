@@ -357,7 +357,7 @@ def isConsistentEdgeSet(Rem, Avail, map_=None, return_map=False):
 				return _Map
 	return False
 
-def findConsistentEdgeMap(Rem, Avail, map_ = None, Super_Maps = None):
+def findConsistentEdgeMap(Rem, Avail, map_=None, Super_Maps=None):
 	if map_ is None:
 		map_ = {}
 	if Super_Maps is None:

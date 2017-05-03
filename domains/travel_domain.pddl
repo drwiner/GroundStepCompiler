@@ -8,7 +8,7 @@
         (place ?place - place)
         (at ?thing - object ?place - object)
         (in ?person - person ?vehicle - transportation-device)
-        (has ?person - person ?ticket - ticket)
+        (has-ticket ?person - person)
         )
                     
     (:action get-in-car
@@ -33,18 +33,18 @@
                     (not (in ?person ?car))))
                     
     (:action buy-tickets
-        :parameters (?person - person ?ticket - ticket)
+        :parameters (?person - person)
         :precondition ()
-        :effect (has ?person ?ticket))
+        :effect (has-ticket ?person))
         
     (:action board-plane
-        :parameters (?person - person ?plane - plane ?t - ticket ?place - place)
+        :parameters (?person - person ?plane - plane ?place - place)
         :precondition (and (at ?person ?place)
                            (at ?plane ?place)
-                           (has ?person ?t))
+                           (has-ticket ?person))
         :effect(and (in ?person ?plane)
                     (not(at ?person ?place))
-                    (not(has ?person ?t))))
+                    (not(has-ticket ?person))))
                     
     (:action fly
         :parameters (?person - person ?plane - plane ?from ?to - place)
@@ -81,14 +81,14 @@
         :effect(and (at ?person ?to)
                     (not (at ?person ?from)))
 		:decomp(
-			:sub-params (?plane - plane ?t - ticket 
+			:sub-params (?plane - plane
 				?s1 ?s2 ?s3 ?s4 - step)
 			:requirements(and
 				(= ?s1 (buy-tickets ?person))
                 (= ?s2 (board-plane ?person ?plane ?from))
                 (= ?s3 (fly ?person ?plane ?from ?to))
                 (= ?s4 (deplane ?person ?plane ?to))
-				(linked-by ?s1 ?s2 (has ?person ?t))
+				(linked-by ?s1 ?s2 (has-ticket ?person))
 				(linked-by ?s2 ?s3 (in ?person ?plane))
 				(linked-by ?s2 ?s4 (in ?person ?plane))
 				(linked-by ?s3 ?s4 (at ?plane ?to)))))

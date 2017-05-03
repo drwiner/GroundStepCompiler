@@ -132,6 +132,21 @@ class simpleQueueWrapper(collections.deque):
 		for it in iter:
 			self.append(it)
 
+
+from collections import namedtuple
+
+Flaw_Type_List = namedtuple('FlawTypes', 'statics inits threats decomps unsafe reusable nonreusable'.split())
+class FlawTypes:
+	def __init__(self, statics, inits, threats, decomps, unsafe, reusable, nonreusable):
+		self._list = [statics, inits, threats, decomps, unsafe, reusable, nonreusable]
+
+	def __len__(self):
+		return len(self._list)
+	def __getitem__(self, item):
+		return self._list[item]
+
+
+
 class FlawLib():
 	non_static_preds = set()
 
@@ -158,7 +173,7 @@ class FlawLib():
 		#nonreusable = open conditions inconsistent with existing effect sorted by number of cndts
 		self.nonreusable = Flawque('nonreusable')
 
-		self.typs = [self.statics, self.inits, self.threats, self.decomps, self.unsafe, self.reusable, self.nonreusable]
+		self.typs = FlawTypes(self.statics, self.inits, self.threats, self.decomps, self.unsafe, self.reusable, self.nonreusable)
 		self.restricted_names = ['threats', 'decomps']
 
 	# @property
