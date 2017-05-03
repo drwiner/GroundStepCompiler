@@ -210,7 +210,11 @@ def decorateElm(child, DG):
 
 def stepFromArg(arg, DG):
 	step_elm = whichElm(arg.children[0].key.name, DG)
-	args = [whichElm(child.key.name, DG) for child in arg.children[0].children]
+	# step type
+	op_type = arg.children[1].key
+	step_elm.name = op_type
+	args = [whichElm(child.key.name, DG) for child in arg.children[1].children]
+	# args = [whichElm(child.key.name, DG) for child in arg.children[0].children]
 	for i, arg in enumerate(args):
 		DG.edges.add(Edge(step_elm, arg, i))
 
@@ -263,8 +267,12 @@ def rPrintFormulaElements(formula):
 def createElementByType(parameter, decomp):
 	paramtypes = GC.object_types[next(iter(parameter.types))]
 
-	if 'character' in parameter.types or 'actor' in parameter.types or 'person' in parameter.types:
-		elm = Actor(arg_name=parameter.name)
+	if 'character' in parameter.types:
+		elm = Actor(typ='character', arg_name=parameter.name)
+	elif 'actor' in parameter.types:
+		elm = Actor(typ='actor', arg_name=parameter.name)
+	elif 'person' in parameter.types:
+		elm = Actor(typ='person', arg_name=parameter.name)
 	elif 'arg' in paramtypes or 'item' in paramtypes or 'place' in paramtypes:
 		arg_type = next(iter(parameter.types))
 		elm = Argument(typ=arg_type, arg_name=parameter.name)
@@ -285,8 +293,14 @@ def createElementByType(parameter, decomp):
 def evalActionParams(params, op_graph):
 	for i, parameter in enumerate(params):
 		# parameters are list
-		if 'character' in parameter.types or 'actor' in parameter.types:
-			arg = Actor(arg_name=parameter.name)
+		if 'character' in parameter.types:
+			arg = Actor(typ='character', arg_name=parameter.name)
+			op_graph.elements.add(arg)
+		elif 'actor' in parameter.types:
+			arg = Actor(typ='actor', arg_name=parameter.name)
+			op_graph.elements.add(arg)
+		elif 'person' in parameter.types:
+			arg = Actor(typ='person', arg_name=parameter.name)
 			op_graph.elements.add(arg)
 		# elif 'literal' in parameter.types or 'lit' in parameter.types:
 		# 	lit = Literal(arg_name=parameter.name, typ='Condition')
@@ -319,20 +333,22 @@ def domainToOperatorGraphs(domain):
 			getFormulaGraph(action.effect.formula, op_graph, parent=op, relationship='effect-of',
 							elements=op_graph.elements,
 							edges=op_graph.edges)
+
 		if action.decomp is not None:
 			# henceforth, action.decomp is tuple (sub-params, decomp)
 			decomp_graph = PlanElementGraph(name=action.name, type_graph='decomp')
-			# need to adjust this slightly:
-			getDecompGraph(action.decomp[1].formula, decomp_graph, action.parameters + action.decomp[0])
+			getDecompGraph(action.decomp.formula, decomp_graph, action.parameters + action.decomp.sub_params)
 			op_graph.subplan = decomp_graph
-			opelms = list(op_graph.elements)
-			dpelms = list(decomp_graph.elements)
-			for step_elm in opelms:
-				for d_elm in dpelms:
-					if not isinstance(d_elm, Argument):
-						continue
-					if d_elm.arg_name == step_elm.arg_name:
-						op_graph.assign(step_elm, d_elm)
+
+			# This searches for params that are listed as params and sub-params, may not be needed
+			# opelms = list(op_graph.elements)
+			# dpelms = list(decomp_graph.elements)
+			# for step_elm in opelms:
+			# 	for d_elm in dpelms:
+			# 		if not isinstance(d_elm, Argument):
+			# 			continue
+			# 		if d_elm.arg_name == step_elm.arg_name:
+			# 			op_graph.assign(step_elm, d_elm)
 			dopGraphs.add(op_graph)
 		else:
 			opGraphs.add(op_graph)
@@ -351,9 +367,9 @@ def problemToGraphs(problem):
 	"""
 
 	Args = {object.name: Argument(name=object.name, typ=object.typeName) for object in problem.objects if
-			not object.typeName.lower() in {'character', 'actor'}}
-	Args.update({object.name: Actor(name=object.name) for object in problem.objects if
-				 object.typeName.lower() in {'character', 'actor'}})
+			not object.typeName.lower() in {'character', 'actor', 'person', 'agent'}}
+	Args.update({object.name: Actor(typ=object.typeName.lower(), name=object.name) for object in problem.objects if
+				 object.typeName.lower() in {'character', 'actor', 'person', 'agent'}})
 	goal_elements, goal_edges = getGoalSet(problem.goal.formula, Args)
 	goal_op = Operator(name='dummy_goal', stepnumber=1, num_args=0)
 	goal_graph = Action(name='dummy_goal', root_element=goal_op)

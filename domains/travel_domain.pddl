@@ -90,6 +90,6 @@
                 (= ?s4 (deplane ?person ?plane ?to))
 				(linked-by ?s1 ?s2 (has ?person ?t))
 				(linked-by ?s2 ?s3 (in ?person ?plane))
-				(linked-by ?s2 ?s4 (in ?person ?place))
+				(linked-by ?s2 ?s4 (in ?person ?plane))
 				(linked-by ?s3 ?s4 (at ?plane ?to)))))
 )

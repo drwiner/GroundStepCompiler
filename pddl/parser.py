@@ -138,13 +138,14 @@ class RequirementsStmt(Visitable):
 class DecompStmt(Visitable):
 	"""This class represents the AST node for a pddl requirements statement."""
 
-	def __init__(self, formula):
+	def __init__(self, subparams, formula):
 		""" Construct a new RequirementsStmt - a formula (an 'and' literal where each sub-literal's terms are vars,
 		or a single literal whose terms are vars.
 
 		Keyword arguments:
 		keywords -- the list of requirements, represented as keywords
 		"""
+		self.sub_params = subparams
 		self._visitorName = 'visit_decomp_stmt'
 		#self.keywords = keywords or []	# a list of keywords
 		self.formula = formula
@@ -224,6 +225,7 @@ class Formula(Visitable):
 		self.children = children or []	# a list of Formulas
 		self.type = type  # a Type
 
+
 class ActionStmt(Visitable):
 	"""This class represents the AST node for a pddl action."""
 
@@ -245,6 +247,7 @@ class ActionStmt(Visitable):
 		self.effect  = effect
 		self.decomp = decomp
 		self.agents = agents
+
 
 class AxiomStmt(Visitable):
 	"""This calss represents the AST node for a pddl axiom."""
@@ -540,6 +543,7 @@ def parse_vars(iter):
 	varList = parse_typed_var_list(next(iter))
 	return varList
 
+
 def parse_context(iter):
 	if not iter.try_match(':context'):
 		raise ValueError('Error keyword ":context" required before context list!')
@@ -678,12 +682,14 @@ def _parse_formula(iter, type):
 	cond = parse_formula(ni)
 	return type(cond)
 
+
 def parse_precondition_stmt(it):
 	return _parse_precondition_or_effect(it, ':precondition', PreconditionStmt)
 
 
 def parse_effect_stmt(it):
 	return _parse_precondition_or_effect(it, ':effect', EffectStmt)
+
 
 def parse_requirements_stmt(iter):
 	""" Parse the pddl requirements definition.
@@ -700,19 +706,24 @@ def parse_requirements_stmt(iter):
 def parse_decomp_stmt(it):
 	# call parsers to parse sub-params, requirements, effect
 	# first its the parameters
+	# _parse_precondition_or_effect(it, ':sub-params', DecompStmt)
 	it = it.next()
 	if not it.try_match(':sub-params'):
 		raise ValueError("Error decomp statement needs :sub-params")
 	varList = parse_typed_var_list(next(it))
+
 	if not it.try_match(':requirements'):
 		raise ValueError('Error decomp statement needs :requirements')
-	rq = _parse_formula(next(it), DecompStmt)
+	ni = next(it)
+	if ni.empty():
+		return None
 
-	return (varList, rq)
+	return DecompStmt(varList, parse_formula(ni))
 
 	
 def parse_agents_stmt(it):
 	return _parse_precondition_or_effect(it, ':agents', AgentsStmt)
+
 
 def parse_axiom_stmt(iter):
 	"""
@@ -729,6 +740,7 @@ def parse_axiom_stmt(iter):
 	context = parse_context(iter)
 	implies = parse_implies(iter)
 	return AxiomStmt(name, params, context, implies)
+
 
 def parse_action_stmt(iter):
 	"""
@@ -902,6 +914,7 @@ def parse_goal_stmt(iter):
 		raise ValueError('Error found invalid keyword when parsing GoalStmt')
 	f = parse_formula(next(iter))
 	return GoalStmt(f)
+
 
 def parse_element_stmt(iter):
 	if not iter.try_match(':element'):

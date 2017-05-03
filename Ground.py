@@ -186,24 +186,20 @@ class GLib:
 				break
 			self.loadPartition(D)
 
-		#self._gsteps.extend(D)
-
 		init_action.root.stepnumber = len(self._gsteps)
+		# replacing internal replaced_IDs
 		init_action._replaceInternals()
+		# replace IDs
 		init_action.replaceInternals()
-		#self._gsteps.append(init_action)
-		# goal at [-1]
-		goal_action.root.stepnumber = len(self._gsteps) + 1
-		goal_action._replaceInternals()
-		goal_action.replaceInternals()
-	#	self._gsteps.append(goal_action)
 
+		goal_action.root.stepnumber = len(self._gsteps) + 1
+		# replace internal replaced_IDs
+		goal_action._replaceInternals()
+		# replace IDs
+		goal_action.replaceInternals()
+
+		# check if init and goal have potential causal relationships
 		self.loadPartition([init_action, goal_action])
-		#self.load({init_action}, self._gsteps)
-	#	self.load(self._gsteps, {goal_action})
-	#	self.load({init_action}, {goal_action})
-		#self._gsteps.append(init_action)
-		#self._gsteps.append(goal_action)
 
 		print('{} ground steps created'.format(len(self)))
 		print('uploading')

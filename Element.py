@@ -25,7 +25,9 @@ class Element:
 
 		self.ID = ID
 		self.typ = typ
+		# name is op_type, or literal predicate name, etc.
 		self.name = name
+		# arg_name is 
 		self.arg_name = arg_name
 		self.replaced_ID = -1
 
