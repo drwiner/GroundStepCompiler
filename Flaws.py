@@ -286,11 +286,8 @@ class FlawLib():
 		self.nonreusable.add(flaw)
 
 	def __repr__(self):
-		#flaw_str_list = [str([flaw for flaw in flaw_set]) for flaw_set in self.typs]
 		F = [('|' + ''.join([str(flaw) + '\n|' for flaw in T]) , T.name) for T in self.typs if len(T) > 0]
-		#flaw_lib_string = str(['\n {}: \n {} '.format(flaws, name) + '\n' for flaws, name in F])
-		return '______________________\n|FLAWLIBRARY: \n|' + ''.join(['\n|{}: \n{}'.format(name, flaws) for
-																		  flaws, name in F]) + '______________________'
+		return '\n|FLAWLIBRARY: \n|' + ''.join(['\n|{}: \n{}'.format(name, flaws) for flaws, name in F])
 
 import unittest
 class TestOrderingGraphMethods(unittest.TestCase):

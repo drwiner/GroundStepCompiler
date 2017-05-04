@@ -3,6 +3,19 @@ from Planner import PlanSpacePlanner
 from Planner import topoSort
 from PlanElementGraph import Action
 from Ground import GLib, upload
+from GElm import GLiteral, GStep
+
+
+
+def deelementize_ground_library(GL):
+	g_steps = []
+	for step in GL._gsteps:
+		preconds = [GLiteral(p.name, p.Args, p.truth, p.replaced_ID) for p in step.Preconditions]
+		gstep = GStep(step.name, step.Args, preconds, step.stepnumber, step.height)
+		gstep.setup(GL.ante_dict, GL.id_dict, GL.threat_dict)
+		g_steps.append(gstep)
+
+
 
 
 if __name__ ==  '__main__':
@@ -16,6 +29,14 @@ if __name__ ==  '__main__':
 		problem_file = 'domains/travel-to-la.pddl'
 
 	GL = GLib(domain_file, problem_file)
+	GL.object_types
+	GL.objects
+	GL._gsteps
+	GL.non_static_preds
+	GL.id_dict
+	GL.ante_dict
+	GL.threat_dict
+
 	upload(GL, GL.name)
 	# planner = PlanSpacePlanner(GL)
 	#
