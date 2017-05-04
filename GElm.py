@@ -30,10 +30,10 @@ class GStep:
 		# height is 0 when primitive
 		self.height = height
 
-		self.cndts = []
-		self.cndt_map = dict()
-		self.threat_map = dict()
-		self.threats = []
+		self.cndts = None
+		self.cndt_map = None
+		self.threat_map = None
+		self.threats = None
 
 
 		# INSTANCE ATTRIBUTES #
@@ -47,16 +47,15 @@ class GStep:
 
 	# public methods #
 
-	def setup(self, step_to_cndt, precond_to_cndt, precond_to_threat):
+	def setup(self, step_to_cndt, precond_to_cndt, step_to_threats):
 		"""
 		:param step_to_cndt: dict of form GStep -> GStep^k such as D[step_num] -> [cndt antecedent step nums]
-		:param precond_to_cndt: dict of form GLiteral -> GStep^k such as D[pre._ID] -> [cndt antecedent step nums]
-		:param precond_to_threat: dict of form GLiteral -> Gstep^k such as D[pre._ID] -> [cndt threat step nums]
+		:param precond_to_cndt: dict of form GLiteral -> GStep^k such as D[pre.ID] -> [cndt antecedent step nums]
+		:param step_to_threat: dict of form GLiteral -> Gstep^k such as D[step_num] -> [cndt threat step nums]
 		"""
 		self.cndts = list(step_to_cndt[self.stepnum])
-		self.cndt_map = {pre._ID : list(precond_to_cndt[pre._ID]) for pre in self.preconds}
-		self.threat_map = {pre._ID : list(precond_to_threat(pre._ID)) for pre in self.preconds}
-		self.threats = [num for t_list in self.threat_map.values() for num in t_list]
+		self.cndt_map = {pre.ID: list(precond_to_cndt[pre.ID]) for pre in self.preconds}
+		self.threats = list(step_to_threats[self.stepnum])
 
 	def instantiate(self, default_refresh=None, default_None_is_to_refresh_open_preconds=None):
 		new_self = copy.deepcopy(self)
@@ -70,12 +69,12 @@ class GStep:
 
 
 	def fulfill(self, pre):
-		if not hasattr(self, 'cndt_map'):
+		if self.cndt_map is None:
 			raise AttributeError('Cndt Map not found; run setup(xyz) first')
 		if pre.ID not in self.cndt_map:
 			raise ValueError('{} not found in cndt_map, id={}'.format(pre, pre.ID))
 		if pre not in self.preconds:
-			raise ValueError('{} found in cndt_map w/ id={}, but {} not found in preconds'.format(pre, pre._ID, pre))
+			raise ValueError('{} found in cndt_map w/ id={}, but {} not found in preconds'.format(pre, pre.ID, pre))
 		# remove precondition from open precond
 		self.open_preconds.remove(pre)
 		# update choices to just those which are needed to fulfill open conditions
@@ -107,11 +106,12 @@ class GLiteral:
 	"""
 	A READ-ONLY Ground Literal / Condition
 	"""
-	def __init__(self, pred_name, arg_tup, trudom, _id):
+	def __init__(self, pred_name, arg_tup, trudom, _id, is_static):
 		self.name = pred_name
 		self.Args = list(arg_tup)
 		self.truth = trudom
 		self.ID = _id
+		self.is_static = is_static
 
 	def instantiate(self):
 		return copy.deepcopy(self)
@@ -139,7 +139,6 @@ class Plan:
 		self.initial_dummy_step = None
 		self.final_dummy_step = None
 		self.steps = []
-		self.Steps = []
 
 	def __hash__(self):
 		return hash(self.ID)

@@ -304,6 +304,7 @@ class GLib:
 	def __repr__(self):
 		return 'Grounded Step Library: \n' +  str([step.__repr__() for step in self._gsteps])
 
+
 if __name__ ==  '__main__':
 	domain_file = 'domains/ark-domain.pddl'
 	problem_file = 'domains/ark-problem.pddl'
